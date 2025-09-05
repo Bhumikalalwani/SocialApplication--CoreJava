@@ -1,5 +1,5 @@
 package com.socialchat;
-import com.socialchat.sql.*;
+
 import com.socialchat.models.*;
 import com.socialchat.services.SearchService;
 import com.socialchat.storage.Database;
@@ -8,9 +8,14 @@ import java.util.Scanner;
 import java.util.UUID;
 
 public class Main {
+
     private static final Scanner scanner = new Scanner(System.in);
     private static final Database db = Database.getInstance();
     private static final SearchService searchService = new SearchService();
+    private static final String user1Id = "u1";
+    private static final String user2Id = "u2";
+    private static String user1Name;
+    private static String user2Name;
     private static void initializeDatabaseCredentials() {
         System.out.print("Enter DB username: ");
         String username = scanner.nextLine();

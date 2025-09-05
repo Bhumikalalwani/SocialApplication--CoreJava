@@ -1,7 +1,11 @@
 package com.socialchat.storage;
 
-import com.socialchat.models.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.util.Properties;
+import java.io.InputStream;
 
+import com.socialchat.models.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -11,14 +15,40 @@ public class Database {
     private static Database instance;
     private String username;
     private String password;
+    private static Connection connection;
 
+    public void setCredentials(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+    public String getUsername() { return username; }
+    public String getPassword() { return password; }
 
+    static {
+        try (InputStream input = Database.class.getClassLoader().getResourceAsStream("db.properties")) {
+            Properties prop = new Properties();
+            prop.load(input);
+            String url = prop.getProperty("db.url");
+            String user = prop.getProperty("db.username");
+            String pass = prop.getProperty("db.password");
+            connection = DriverManager.getConnection(url, user, pass);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static Connection getConnection() {
+        return connection;
+    }
     private final Map<String, User> users = new HashMap<>();
     private final Map<String, Group> groups = new HashMap<>();
     private final Map<String, Post> posts = new HashMap<>();
     private final Map<String, Message> messages = new HashMap<>();
     private final Map<String, Attachment> attachments = new HashMap<>();
     private final Map<String, List<Story>> stories = new HashMap<>();
+    public Map<String, List<Message>> directMessages() { return new HashMap<>();}
+    public Map<String, List<Message>> groupMessages() { return new HashMap<>();}
+
 
     private Database() {}
 
