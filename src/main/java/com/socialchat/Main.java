@@ -1,5 +1,7 @@
 package com.socialchat;
 
+import java.util.List;
+
 import com.socialchat.models.*;
 import com.socialchat.services.*;
 
@@ -43,36 +45,159 @@ public class Main {
 
         System.out.println("✅ Demo complete");
 //FOR POSTS STORIES AND MOMENTs
+        // ---------------- FEED DEMO (Dynamic with Likes + Comments) ----------------
         System.out.println("\n===== FEED DEMO (Moments & Stories) =====");
 
         MomentService momentService = new MomentService();
         StoryService storyService = new StoryService();
 
-// Alice posts a moment
-        MomentPost aliceMoment = momentService.createMoment(alice.getId(), "Beautiful sunset in Mumbai 🌇");
-        System.out.println("Alice posted a moment: " + aliceMoment.render());
+// Every user posts a moment
+        Database.getInstance().getUsers().values().forEach(user -> {
+            momentService.createMoment(user.getId(), user.getUsername() + " is enjoying SocialChat 🎉");
+        });
 
-// Bob likes Alice’s moment
-        momentService.likeMoment(aliceMoment.getId(), bob.getId());
-        System.out.println("Bob liked Alice’s moment");
+// Every user posts a story
+        Database.getInstance().getUsers().values().forEach(user -> {
+            storyService.createStory(user.getId(), user.getUsername() + "'s story update 🌟");
+        });
 
-// Charlie comments on Alice’s moment
-        momentService.commentMoment(aliceMoment.getId(), "Wow, looks amazing!");
-        System.out.println("Charlie commented on Alice’s moment");
+// Simulate likes & comments (friends engaging with each other)
+        Database.getInstance().getUsers().values().forEach(user -> {
+            Database.getInstance().getUsers().values().forEach(friend -> {
+                if (!friend.getId().equals(user.getId())) {
+                    // friend likes user’s moment
+                    Database.getInstance().getPosts().values().stream().filter(p -> p instanceof MomentPost && p.getAuthorId().equals(user.getId())).forEach(p -> {
+                        momentService.likeMoment(p.getId(), friend.getId());
+                        momentService.addComment(friend.getId(), p.getId(), "Nice one, " + user.getUsername() + "! 👍");
+                    });
+                }
+            });
+        });
 
-// Fetch Alice’s timeline as Bob (friend)
-        System.out.println("\nBob’s Feed (Moments from friends):");
-        momentService.getMomentsForUser(bob.getId())
-                .forEach(mp -> System.out.println(mp.render() + " | Likes: " + mp.getLikes().size() + " | Comments: " + mp.getComments().size()));
+// Now, print each user's feed
+        Database.getInstance().getUsers().values().forEach(user -> {
+            System.out.println("\n--- Feed for " + user.getUsername() + " ---");
 
-// Bob posts a story
-        Story bobStory = storyService.createStory(bob.getId(), "At the café ☕");
-        System.out.println("\nBob posted a story: " + bobStory.getContent());
+            // Moments from friends
+            System.out.println("Moments:");
+            momentService.getMomentsForUser(user.getId()).forEach(mp -> {
+                System.out.println(mp.render());
 
-// Fetch Alice’s active stories from her friends
-        System.out.println("\nAlice’s Active Stories (from friends):");
-        storyService.getActiveStories(alice.getId())
-                .forEach(st -> System.out.println("Story by " + st.getAuthorId() + ": " + st.getContent()));
+                // Show likes
+                if (!mp.getLikes().isEmpty()) {
+                    System.out.println("  Likes: " + mp.getLikes());
+                }
 
+                // Show comments
+                var postComments = momentService.getComments(mp.getId());
+                if (!postComments.isEmpty()) {
+                    System.out.println("  Comments:");
+                    postComments.forEach(c -> System.out.println("    " + c));
+                }
+            });
+
+            // Active stories from friends
+            System.out.println("Stories:");
+            storyService.getActiveStories(user.getId()).forEach(st -> System.out.println("Story by " + st.getAuthorId() + ": " + st.getContent()));
+        });
+        // ---------------- FEED DELETE DEMO ----------------
+        System.out.println("\n===== FEED DELETE DEMO =====");
+
+        var users = Database.getInstance().getUsers().values().stream().toList();
+        if (users.size() >= 2) {
+            var alice = users.get(0); // just picking first two users for demo
+            var bob = users.get(1);
+
+            // Find one of Alice's moments
+            var aliceMoment = Database.getInstance().getPosts().values().stream().filter(p -> p instanceof MomentPost && p.getAuthorId().equals(alice.getId())).map(p -> (MomentPost) p).findFirst().orElse(null);
+
+            if (aliceMoment != null) {
+                System.out.println("\nBefore deletion, Alice's moment:");
+                System.out.println(aliceMoment.render());
+
+                // Bob unlikes Alice’s moment
+                momentService.removeLike(bob.getId(), aliceMoment.getId());
+
+                // Remove Bob’s first comment (if any)
+                var bobComments = momentService.getComments(aliceMoment.getId());
+                if (!bobComments.isEmpty()) {
+                    String commentId = bobComments.get(0).getId();
+                    momentService.deleteComment(commentId, aliceMoment.getId());
+                }
+
+                // Alice deletes her moment entirely
+                momentService.deleteMoment(aliceMoment.getId(), alice.getId());
+
+                // Verify deletion
+                var stillExists = Database.getInstance().getPosts().containsKey(aliceMoment.getId());
+                System.out.println("Moment still exists after delete? " + stillExists);
+            }
+        }
+        // ---------------- FEED TIMELINE ----------------
+        System.out.println("\n===== FEED TIMELINE =====");
+        users.forEach(user -> {
+            System.out.println("\nFeed for " + user.getName() + ":");
+
+            List<MomentPost> feed = momentService.getMomentsForUser(user.getId());
+            if (feed.isEmpty()) {
+                System.out.println("  No moments yet.");
+            } else {
+                feed.stream().filter(m -> Database.getInstance().getPosts().containsKey(m.getId())) // skip deleted
+                        .forEach(m -> {
+                            System.out.println("  " + m.render());
+
+                            // Show likes
+                            if (!m.getLikes().isEmpty()) {
+                                System.out.println("    Likes: " + m.getLikes().size() + " -> " + m.getLikes());
+                            }
+
+                            // Show comments
+                            var comments = momentService.getComments(m.getId());
+                            if (!comments.isEmpty()) {
+                                System.out.println("    Comments:");
+                                comments.forEach(c -> System.out.println("      - " + c.getAuthorId() + ": " + c.getText()));
+                            }
+                        });
+            }
+        });
+        // ---------------- SEARCH MESSAGES DEMO ----------------
+        System.out.println("\n===== SEARCH MESSAGES DEMO =====");
+        SearchService search = new SearchService();
+
+        // Search text inside chats
+        System.out.println("Search Messages 'hello': " +
+                search.searchMessages("hello").stream().map(Message::preview).toList());
+
+        // Search only images
+        System.out.println("Search Messages with Images: " +
+                search.searchMessagesWithAttachments("image").stream().map(Message::preview).toList());
+
+        // ---------------- SEARCH DEMO ----------------
+        System.out.println("\n===== SEARCH DEMO =====");
+
+        // 1. Search users
+        System.out.println("Search users 'alice': " + search.searchUsers("alice"));
+
+        // 2. Search groups
+        Group group = chat.createGroup(alice.getId(), "Study Buddies");
+        chat.addMember(group.getId(), bob.getId());
+        System.out.println("Search groups 'study': " + search.searchGroups("study"));
+
+        // 3. Search posts
+        posts.createTextPost(alice.getId(), "This is my first post!");
+        posts.createImagePost(bob.getId(), "http://example.com/cat.png", "cute cat");
+        System.out.println("Search posts 'cat': " +
+                search.searchPosts("cat").stream().map(Post::render).toList());
+
+        // 4. Search messages
+        System.out.println("Search messages 'hello': " +
+                search.searchMessages("hello").stream().map(Message::render).toList());
+
+        // 5. Search messages with attachments (images only)
+        System.out.println("Search messages with IMAGE attachments: " +
+                search.searchMessagesWithAttachments(AttachmentType.IMAGE)
+                        .stream().map(Message::render).toList());
     }
 }
+
+
