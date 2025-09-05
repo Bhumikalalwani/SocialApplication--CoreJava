@@ -10,8 +10,26 @@ public class ImagePost extends Post {
         this.caption = caption;
     }
 
+    public String getUrl() {
+        return url;
+    }
+
+    public String getCaption() {
+        return caption;
+    }
+
     @Override
     public String render() {
-        return "[ImagePost] " + caption + " (" + url + ")";
+        return caption + " (" + url + ")";
+    }
+
+    @Override
+    public String toString() {
+        return "ImagePost{" +
+                "id='" + getId() + '\'' +
+                ", author='" + getAuthorId() + '\'' +
+                ", url='" + url + '\'' +
+                ", caption='" + caption + '\'' +
+                '}';
     }
 }

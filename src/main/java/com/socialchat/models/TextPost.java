@@ -8,8 +8,21 @@ public class TextPost extends Post {
         this.text = text;
     }
 
+    public String getText() {
+        return text;
+    }
+
     @Override
     public String render() {
-        return "[TextPost] " + text;
+        return text;
+    }
+
+    @Override
+    public String toString() {
+        return "TextPost{" +
+                "id='" + getId() + '\'' +
+                ", author='" + getAuthorId() + '\'' +
+                ", text='" + text + '\'' +
+                '}';
     }
 }

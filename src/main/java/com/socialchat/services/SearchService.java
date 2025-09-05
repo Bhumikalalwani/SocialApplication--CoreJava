@@ -25,24 +25,20 @@ public class SearchService {
                 .collect(Collectors.toList());
     }
 
-    // 🔎 Search posts (moments, stories, text, image)
+    // 🔎 Search posts (Moments, Stories, Text, Image)
     public List<Post> searchPosts(String query) {
         return db.getPosts().values().stream()
                 .filter(p -> {
-                    if (p instanceof MomentPost m)
-                        return m.getContent().toLowerCase().contains(query.toLowerCase());
-                    if (p instanceof StoryPost s)
-                        return s.getContent().toLowerCase().contains(query.toLowerCase());
-                    if (p instanceof TextPost t)
-                        return t.getContent().toLowerCase().contains(query.toLowerCase());
-                    if (p instanceof ImagePost i)
-                        return i.getCaption().toLowerCase().contains(query.toLowerCase());
+                    if (p instanceof MomentPost m) return m.getContent().toLowerCase().contains(query.toLowerCase());
+                    if (p instanceof StoryPost s) return s.getContent().toLowerCase().contains(query.toLowerCase());
+                    if (p instanceof TextPost t) return t.getText().toLowerCase().contains(query.toLowerCase());
+                    if (p instanceof ImagePost i) return i.getCaption().toLowerCase().contains(query.toLowerCase());
                     return false;
                 })
                 .collect(Collectors.toList());
     }
 
-    // 🔎 Search text messages
+    // 🔎 Search messages (only text messages for now)
     public List<Message> searchMessages(String query) {
         return db.getMessages().values().stream()
                 .filter(m -> m instanceof TextMessage t &&
@@ -50,10 +46,11 @@ public class SearchService {
                 .collect(Collectors.toList());
     }
 
-    // 📎 Search messages by attachment type
+    // 📎 Search messages with attachments (by type)
     public List<Message> searchMessagesWithAttachments(AttachmentType type) {
         return db.getMessages().values().stream()
-                .filter(m -> m.getAttachments().stream().anyMatch(a -> a.getType() == type))
+                .filter(m -> m.getAttachments() != null &&
+                        m.getAttachments().stream().anyMatch(a -> a.getType() == type))
                 .collect(Collectors.toList());
     }
 }
